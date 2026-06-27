@@ -20,6 +20,8 @@ async function initDb() {
         await pool.query(`
             CREATE TABLE IF NOT EXISTS users (
                 nickname TEXT PRIMARY KEY,
+                email TEXT UNIQUE,
+                passwordHash TEXT,
                 customAvatarUri TEXT,
                 avatarIndex INTEGER,
                 totalHours REAL DEFAULT 0,
@@ -27,6 +29,14 @@ async function initDb() {
                 lastSeen BIGINT
             )
         `);
+
+        // Safely try to add columns if table already existed before this update
+        try {
+            await pool.query(`ALTER TABLE users ADD COLUMN email TEXT UNIQUE`);
+            await pool.query(`ALTER TABLE users ADD COLUMN passwordHash TEXT`);
+        } catch(e) {
+            // Ignore if columns already exist
+        }
 
         // 2. Duels Table
         await pool.query(`
@@ -49,6 +59,44 @@ async function initDb() {
     }
 }
 initDb();
+
+// Register new user
+app.post('/api/users/register', async (req, res) => {
+    const { nickname, email, password } = req.body;
+    if (!nickname || !password) return res.status(400).json({ error: 'Missing credentials' });
+
+    try {
+        await pool.query(
+            `INSERT INTO users (nickname, email, passwordHash, avatarIndex) VALUES ($1, $2, $3, 0)`,
+            [nickname, email || null, password] // in real app use bcrypt
+        );
+        res.json({ status: 'success' });
+    } catch (err) {
+        if (err.code === '23505') { // unique violation
+            res.status(409).json({ error: 'User or Email already exists' });
+        } else {
+            res.status(500).json({ error: err.message });
+        }
+    }
+});
+
+// Login
+app.post('/api/users/login', async (req, res) => {
+    const { nickname, password } = req.body;
+    try {
+        const result = await pool.query(
+            `SELECT * FROM users WHERE nickname = $1 AND passwordHash = $2`,
+            [nickname, password]
+        );
+        if (result.rows.length > 0) {
+            res.json({ status: 'success', user: result.rows[0] });
+        } else {
+            res.status(401).json({ error: 'Invalid credentials' });
+        }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 
 // Sync User Profile
 app.post('/api/users/sync', async (req, res) => {
