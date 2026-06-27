@@ -8,13 +8,9 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 
-// Setup PostgreSQL connection pool
+// Setup PostgreSQL connection pool (Vercel Postgres uses POSTGRES_URL)
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/focuslock',
-    // Uncomment the following lines if deploying to Render/Heroku to accept self-signed SSL certs
-    // ssl: {
-    //     rejectUnauthorized: false
-    // }
+    connectionString: process.env.POSTGRES_URL || process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/focuslock',
 });
 
 // Initialize database schema
@@ -135,6 +131,11 @@ app.get('/api/duels/active/:username', async (req, res) => {
     }
 });
 
-app.listen(PORT, () => {
-    console.log(`FocusLock PostgreSQL backend running on port ${PORT}`);
-});
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(PORT, () => {
+        console.log(`FocusLock PostgreSQL backend running on port ${PORT}`);
+    });
+}
+
+// Export for Vercel Serverless Functions
+module.exports = app;
