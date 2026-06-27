@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: focuslock-backend
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: focuslock-db
+          property: connectionString
+
+databases:
+  - name: focuslock-db
+    databaseName: focuslock
+    user: focuslock_user
+    plan: free

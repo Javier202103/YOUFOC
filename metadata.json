@@ -1,0 +1,6 @@
+{
+  "name": "You",
+  "description": "Extreme productivity and focus app that blocks distractions until a goal is met.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
