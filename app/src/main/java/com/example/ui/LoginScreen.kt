@@ -59,6 +59,7 @@ fun LoginScreen(
     if (!isRegistered) {
         // ONBOARDING / REGISTRATION FLOW
         var nicknameInput by remember { mutableStateOf("") }
+        var emailInput by remember { mutableStateOf("") }
         var pinInput by remember { mutableStateOf("") }
         var selectedGender by remember { mutableStateOf("neutral") }
         var selectedAvatarIndex by remember { mutableStateOf(0) }
@@ -210,12 +211,24 @@ fun LoginScreen(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 OutlinedTextField(
+                    value = emailInput,
+                    onValueChange = { emailInput = it },
+                    label = { Text(if (lang == "es") "Correo Electrónico" else "Email") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedTextField(
                     value = pinInput,
-                    onValueChange = { if (it.length <= 4) pinInput = it },
-                    label = { Text(if (lang == "es") "PIN de Seguridad (4 dígitos)" else "Security PIN (4 digits)") },
+                    onValueChange = { pinInput = it },
+                    label = { Text(if (lang == "es") "Contraseña" else "Password") },
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
                 )
@@ -302,9 +315,10 @@ fun LoginScreen(
 
                 Button(
                     onClick = {
-                        if (nicknameInput.isNotBlank() && pinInput.length >= 4) {
+                        if (nicknameInput.isNotBlank() && pinInput.length >= 4 && emailInput.isNotBlank()) {
                             viewModel.registerUser(
                                 nickname = nicknameInput,
+                                email = emailInput,
                                 pin = pinInput,
                                 gender = selectedGender,
                                 avatarIndex = selectedAvatarIndex,
@@ -313,7 +327,7 @@ fun LoginScreen(
                             )
                         }
                     },
-                    enabled = nicknameInput.isNotBlank() && pinInput.length >= 4,
+                    enabled = nicknameInput.isNotBlank() && pinInput.length >= 4 && emailInput.isNotBlank(),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
@@ -388,29 +402,43 @@ fun LoginScreen(
 
                 OutlinedTextField(
                     value = pinVerify,
-                    onValueChange = {
-                        if (it.length <= 4) {
-                            pinVerify = it
-                            if (it.length == 4) {
-                                viewModel.verifyPinAndLogin(it)
-                            }
-                        }
-                    },
-                    label = { Text("PIN") },
+                    onValueChange = { pinVerify = it },
+                    label = { Text(if (lang == "es") "Contraseña" else "Password") },
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     modifier = Modifier
-                        .width(200.dp)
+                        .fillMaxWidth()
                         .testTag("pin_verify_field"),
                     shape = RoundedCornerShape(12.dp),
                     textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Center, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                 )
 
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Button(
+                    onClick = {
+                        if (pinVerify.isNotBlank()) {
+                            viewModel.verifyPinAndLogin(pinVerify)
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = primaryColor),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Text(
+                        text = if (lang == "es") "Ingresar" else "Login",
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 16.sp
+                    )
+                }
+
                 if (loginError) {
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = if (lang == "es") "¡PIN Incorrecto!" else "Incorrect PIN!",
+                        text = if (lang == "es") "¡Contraseña Incorrecta!" else "Incorrect Password!",
                         color = MaterialTheme.colorScheme.error,
                         fontWeight = FontWeight.Bold
                     )

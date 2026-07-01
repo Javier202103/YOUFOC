@@ -21,7 +21,7 @@ data class OnlineRankEntry(
 object FocusLockApi {
 
     // Change this to your deployed Render/Railway URL later
-    private const val BASE_URL = "https://focuslock-backend.onrender.com"
+    private const val BASE_URL = "https://youfoc.vercel.app"
 
     private suspend fun post(endpoint: String, body: JSONObject): JSONObject? = withContext(Dispatchers.IO) {
         try {
@@ -99,5 +99,23 @@ object FocusLockApi {
                 customAvatarUri = if (obj.isNull("customAvatarUri")) null else obj.optString("customAvatarUri")
             )
         }
+    }
+    suspend fun registerUser(nickname: String, email: String, password: String): Boolean {
+        val body = JSONObject().apply {
+            put("nickname", nickname)
+            put("email", email)
+            put("password", password)
+        }
+        val result = post("/api/users/register", body)
+        return result?.optString("status") == "success"
+    }
+
+    suspend fun loginUser(nickname: String, password: String): Boolean {
+        val body = JSONObject().apply {
+            put("nickname", nickname)
+            put("password", password)
+        }
+        val result = post("/api/users/login", body)
+        return result?.optString("status") == "success"
     }
 }

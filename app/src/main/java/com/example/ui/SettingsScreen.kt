@@ -12,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -22,7 +23,9 @@ import com.example.viewmodel.FocusViewModel
 @Composable
 fun SettingsScreen(
     viewModel: FocusViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onNavigateToAppSelector: () -> Unit,
+    onLogout: () -> Unit
 ) {
     val lang by viewModel.language.collectAsState()
     val vpnActive by viewModel.vpnShieldActive.collectAsState()
@@ -123,6 +126,42 @@ fun SettingsScreen(
                     Switch(
                         checked = accActive,
                         onCheckedChange = { viewModel.toggleAccessibilityLocker() }
+                    )
+                }
+            }
+
+            // App Whitelist Selection
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                onClick = onNavigateToAppSelector
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = if (lang == "es") "Aplicaciones Permitidas (5 Apps)" else "Allowed Apps (5 Apps)",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = if (lang == "es") "Selecciona qué apps (Duolingo, Libros) puedes usar mientras estás enfocado." else "Select which apps (Duolingo, Books) you can use while focused.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Icon(
+                        Icons.Default.ArrowBack, // We'll just use ArrowBack and rotate it or something, or better yet, skip the icon for now.
+                        contentDescription = "Go",
+                        modifier = Modifier.scale(scaleX = -1f, scaleY = 1f) // Flip arrow to point right
                     )
                 }
             }
@@ -293,6 +332,23 @@ fun SettingsScreen(
                         color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
                 }
+            }
+            
+            Spacer(modifier = Modifier.height(32.dp))
+            
+            Button(
+                onClick = { 
+                    viewModel.logout()
+                    onLogout()
+                },
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            ) {
+                Text(
+                    text = if (lang == "es") "Cerrar Sesión" else "Log Out",
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onError
+                )
             }
         }
     }

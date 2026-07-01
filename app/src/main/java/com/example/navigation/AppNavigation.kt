@@ -40,6 +40,8 @@ object Routes {
     const val FOCUS_MODE = "focus_mode/{goalId}"
     const val ANALYTICS = "analytics"
     const val DUELS = "duels"
+    const val APP_SELECTOR = "app_selector"
+    const val PERMISSIONS = "permissions"
     
     fun createFocusRoute(goalId: Int) = "focus_mode/$goalId"
 }
@@ -55,6 +57,7 @@ sealed class BottomNavItem(var route: String, var icon: ImageVector, var selecte
 @Composable
 fun AppNavigation(viewModel: FocusViewModel) {
     val navController = rememberNavController()
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
@@ -73,7 +76,7 @@ fun AppNavigation(viewModel: FocusViewModel) {
 
     val currentHour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
     val isSleepTime = currentHour >= 23 || currentHour < 6
-    val isLocked = focusSleepEnabled && (isSleepTime || forceSleepSimulation) && currentDestination?.route != Routes.LOGIN
+    val isLocked = focusSleepEnabled && (isSleepTime || forceSleepSimulation) && currentDestination?.route != Routes.LOGIN && currentDestination?.route != Routes.PERMISSIONS
 
     if (isLocked) {
         FocusSleepLockScreen(viewModel)
@@ -124,8 +127,25 @@ fun AppNavigation(viewModel: FocusViewModel) {
                 LoginScreen(
                     viewModel = viewModel,
                     onLoginSuccess = {
+                        val allGranted = checkOverlayPermission(context) && checkAccessibilityPermission(context) && checkAdminPermission(context)
+                        if (allGranted) {
+                            navController.navigate(Routes.DASHBOARD) {
+                                popUpTo(Routes.LOGIN) { inclusive = true }
+                            }
+                        } else {
+                            navController.navigate(Routes.PERMISSIONS) {
+                                popUpTo(Routes.LOGIN) { inclusive = true }
+                            }
+                        }
+                    }
+                )
+            }
+            composable(Routes.PERMISSIONS) {
+                PermissionsScreen(
+                    viewModel = viewModel,
+                    onPermissionsGranted = {
                         navController.navigate(Routes.DASHBOARD) {
-                            popUpTo(Routes.LOGIN) { inclusive = true }
+                            popUpTo(Routes.PERMISSIONS) { inclusive = true }
                         }
                     }
                 )
@@ -156,7 +176,13 @@ fun AppNavigation(viewModel: FocusViewModel) {
             composable(Routes.SETTINGS) {
                 SettingsScreen(
                     viewModel = viewModel,
-                    onBack = { navController.popBackStack() }
+                    onBack = { navController.popBackStack() },
+                    onNavigateToAppSelector = { navController.navigate(Routes.APP_SELECTOR) },
+                    onLogout = {
+                        navController.navigate(Routes.LOGIN) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
                 )
             }
             composable(
@@ -180,6 +206,12 @@ fun AppNavigation(viewModel: FocusViewModel) {
             }
             composable(Routes.DUELS) {
                 DuelsScreen(viewModel = viewModel)
+            }
+            composable(Routes.APP_SELECTOR) {
+                AppSelectorScreen(
+                    viewModel = viewModel,
+                    onBack = { navController.popBackStack() }
+                )
             }
         }
     }

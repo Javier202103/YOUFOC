@@ -38,7 +38,35 @@ async function initDb() {
             // Ignore if columns already exist
         }
 
-        // 2. Duels Table
+        // 2. Goals Table (server-side backup)
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS goals (
+                id SERIAL PRIMARY KEY,
+                owner TEXT REFERENCES users(nickname),
+                title TEXT,
+                description TEXT,
+                durationMinutes INTEGER,
+                isPomodoro BOOLEAN DEFAULT false,
+                isCompleted BOOLEAN DEFAULT false,
+                targetAppPackage TEXT,
+                createdAt BIGINT,
+                completedAt BIGINT
+            )
+        `);
+
+        // 3. Focus Sessions Table
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS focus_sessions (
+                id SERIAL PRIMARY KEY,
+                owner TEXT REFERENCES users(nickname),
+                goalTitle TEXT,
+                durationMinutes INTEGER,
+                completedAt BIGINT,
+                xpEarned INTEGER DEFAULT 0
+            )
+        `);
+
+        // 4. Duels Table
         await pool.query(`
             CREATE TABLE IF NOT EXISTS duels (
                 id SERIAL PRIMARY KEY,
@@ -59,6 +87,65 @@ async function initDb() {
     }
 }
 initDb();
+
+// ========================
+// SYNC BATCH (Offline-First Queue)
+// ========================
+app.post('/api/sync/batch', async (req, res) => {
+    const { actions } = req.body; // array of SyncAction objects
+    if (!actions || !Array.isArray(actions)) {
+        return res.status(400).json({ error: 'Missing actions array' });
+    }
+
+    const results = [];
+    for (const action of actions) {
+        try {
+            switch (action.actionType) {
+                case 'SYNC_PROFILE':
+                    await pool.query(
+                        `INSERT INTO users (nickname, totalHours, xp, lastSeen)
+                         VALUES ($1, $2, $3, $4)
+                         ON CONFLICT(nickname) DO UPDATE SET
+                            totalHours = EXCLUDED.totalHours,
+                            xp = EXCLUDED.xp,
+                            lastSeen = EXCLUDED.lastSeen`,
+                        [action.entityId, JSON.parse(action.payload).totalHours || 0, JSON.parse(action.payload).xp || 0, Date.now()]
+                    );
+                    results.push({ id: action.id, status: 'OK' });
+                    break;
+
+                case 'SYNC_GOAL':
+                    const goalData = JSON.parse(action.payload);
+                    await pool.query(
+                        `INSERT INTO goals (owner, title, description, durationMinutes, isPomodoro, isCompleted, targetAppPackage, createdAt, completedAt)
+                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                         ON CONFLICT DO NOTHING`,
+                        [action.entityId, goalData.title, goalData.description || '', goalData.durationMinutes, goalData.isPomodoro || false, goalData.isCompleted || false, goalData.targetAppPackage || null, goalData.createdAt || Date.now(), goalData.completedAt || null]
+                    );
+                    results.push({ id: action.id, status: 'OK' });
+                    break;
+
+                case 'SYNC_SESSION':
+                    const sessionData = JSON.parse(action.payload);
+                    await pool.query(
+                        `INSERT INTO focus_sessions (owner, goalTitle, durationMinutes, completedAt, xpEarned)
+                         VALUES ($1, $2, $3, $4, $5)`,
+                        [action.entityId, sessionData.goalTitle, sessionData.durationMinutes, sessionData.completedAt || Date.now(), sessionData.xpEarned || 0]
+                    );
+                    results.push({ id: action.id, status: 'OK' });
+                    break;
+
+                default:
+                    results.push({ id: action.id, status: 'UNKNOWN_TYPE' });
+            }
+        } catch (err) {
+            console.error(`Sync action ${action.id} failed:`, err.message);
+            results.push({ id: action.id, status: 'ERROR', error: err.message });
+        }
+    }
+
+    res.json({ status: 'success', results });
+});
 
 // Register new user
 app.post('/api/users/register', async (req, res) => {

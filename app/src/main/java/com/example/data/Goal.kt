@@ -10,5 +10,6 @@ data class Goal(
     val durationMinutes: Int,
     val isCompleted: Boolean = false,
     val isPomodoro: Boolean = false,
+    val targetAppPackage: String? = null,
     val createdAt: Long = System.currentTimeMillis()
 )

@@ -10,5 +10,6 @@ data class UserSettings(
     val accessibilityLockerActive: Boolean = false,
     val waTimerMinutes: Int = 5,
     val focusSleepEnabled: Boolean = true,
-    val forceSleepSimulation: Boolean = false
+    val forceSleepSimulation: Boolean = false,
+    val allowedApps: String = "" // Comma-separated package names
 )

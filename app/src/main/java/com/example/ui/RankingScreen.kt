@@ -63,16 +63,8 @@ fun RankingScreen(viewModel: FocusViewModel) {
             .map { RankEntry(it.nickname, it.totalHours, avatars.getOrElse(it.avatarIndex) { "🐼" }) }
         (onlineEntries + userEntry).sortedByDescending { it.hours }
     } else {
-        // Offline fallback with NPCs
-        val fixedRivals = listOf(
-            RankEntry("Alex M.", 120f, "🐙"),
-            RankEntry("Maria S.", 95f, "🦊"),
-            RankEntry("Juan D.", 84f, "🐉"),
-            RankEntry("Carlos V.", 42f, "🐯"),
-            RankEntry("Elena P.", 36f, "🦁"),
-            RankEntry("Sofia R.", 10f, "🐼")
-        )
-        (fixedRivals + userEntry).sortedByDescending { it.hours }
+        // Offline or empty: just show the user
+        listOf(userEntry)
     }
 
     Column(

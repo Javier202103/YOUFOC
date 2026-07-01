@@ -31,12 +31,19 @@ import com.example.data.Goal
 import com.example.viewmodel.FocusViewModel
 import kotlinx.coroutines.delay
 
+import android.content.Intent
+import android.provider.Settings
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
+import com.example.service.FocusAccessibilityService
+
 @Composable
 fun FocusModeScreen(
     goalId: Int,
     viewModel: FocusViewModel,
     onComplete: () -> Unit
 ) {
+    val context = LocalContext.current
     val goals by viewModel.uiState.collectAsState()
     val lang by viewModel.language.collectAsState()
     val gender by viewModel.gender.collectAsState()
@@ -45,10 +52,17 @@ fun FocusModeScreen(
     // Sound control
     val currentSound by viewModel.currentAmbientSound.collectAsState()
 
-    // Stop ambient sound when leaving Focus Mode
+    // Start FocusLockService and stop ambient sound / service when leaving Focus Mode
     DisposableEffect(Unit) {
+        FocusAccessibilityService.isSessionActive = true
+        FocusAccessibilityService.currentGoalTargetApp = goal.targetAppPackage
+        
+        // Optional: Notify user if service is not running (a full check requires AccessibilityManager)
+        Toast.makeText(context, "Modo de enfoque activado. Asegúrate de tener el servicio de accesibilidad encendido.", Toast.LENGTH_LONG).show()
+        
         onDispose {
             viewModel.stopAmbientSound()
+            FocusAccessibilityService.isSessionActive = false
         }
     }
 

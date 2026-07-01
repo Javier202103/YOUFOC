@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
 import java.util.Calendar
 
 class FocusViewModel(application: Application) : AndroidViewModel(application) {
@@ -100,6 +101,9 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _waTimerMinutes = MutableStateFlow(5)
     val waTimerMinutes = _waTimerMinutes.asStateFlow()
+
+    private val _allowedApps = MutableStateFlow("")
+    val allowedApps = _allowedApps.asStateFlow()
 
     private val _focusSleepEnabled = MutableStateFlow(true)
     val focusSleepEnabled = _focusSleepEnabled.asStateFlow()
@@ -228,6 +232,13 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+    fun setAllowedApps(apps: String) {
+        _allowedApps.value = apps
+        viewModelScope.launch {
+            val settings = settingsDao.getSettingsOnce() ?: UserSettings()
+            settingsDao.insertSettings(settings.copy(allowedApps = apps))
+        }
+    }
 
     private fun loadSettingsFromDb() {
         viewModelScope.launch {
@@ -238,8 +249,33 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
                 _waTimerMinutes.value = settings.waTimerMinutes
                 _focusSleepEnabled.value = settings.focusSleepEnabled
                 _forceSleepSimulation.value = settings.forceSleepSimulation
+                _allowedApps.value = settings.allowedApps
             } else {
                 settingsDao.insertSettings(UserSettings())
+            }
+        }
+    }
+
+    data class AppInfo(val packageName: String, val name: String)
+
+    private val _installedApps = MutableStateFlow<List<AppInfo>>(emptyList())
+    val installedApps = _installedApps.asStateFlow()
+
+    fun loadInstalledApps(context: android.content.Context) {
+        viewModelScope.launch(Dispatchers.IO) {
+            if (_installedApps.value.isEmpty()) {
+                val pm = context.packageManager
+                val packages = pm.getInstalledApplications(android.content.pm.PackageManager.GET_META_DATA)
+                val list = packages.mapNotNull { appInfo ->
+                    // Only show launchable apps
+                    if (pm.getLaunchIntentForPackage(appInfo.packageName) != null) {
+                        AppInfo(
+                            packageName = appInfo.packageName,
+                            name = pm.getApplicationLabel(appInfo).toString()
+                        )
+                    } else null
+                }.sortedBy { it.name }
+                _installedApps.value = list
             }
         }
     }
@@ -402,6 +438,7 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
 
     fun registerUser(
         nickname: String,
+        email: String,
         pin: String,
         gender: String,
         avatarIndex: Int,
@@ -409,30 +446,36 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         interests: List<String>
     ) {
         viewModelScope.launch {
-            val profile = profileDao.getProfileOnce() ?: UserProfile()
-            val updatedProfile = profile.copy(
-                nickname = nickname,
-                pinHash = pin,
-                gender = gender,
-                avatarIndex = avatarIndex,
-                customAvatarUri = customAvatarUri,
-                interests = interests.joinToString(","),
-                isRegistered = true,
-                isLoggedIn = true
-            )
-            profileDao.insertProfile(updatedProfile)
+            // First register on Vercel Backend
+            val registered = com.example.network.FocusLockApi.registerUser(nickname, email, pin)
+            if (registered || !isOnline.value) {
+                val profile = profileDao.getProfileOnce() ?: UserProfile()
+                val updatedProfile = profile.copy(
+                    nickname = nickname,
+                    pinHash = pin, // now used as password
+                    gender = gender,
+                    avatarIndex = avatarIndex,
+                    customAvatarUri = customAvatarUri,
+                    interests = interests.joinToString(","),
+                    isRegistered = true,
+                    isLoggedIn = true
+                )
+                profileDao.insertProfile(updatedProfile)
 
-            // Reload into state flows
-            _nickname.value = nickname
-            _gender.value = gender
-            _avatarIndex.value = avatarIndex
-            _customAvatarUri.value = customAvatarUri
-            _interests.value = interests
-            _isRegistered.value = true
-            _isUserLoggedIn.value = true
+                // Reload into state flows
+                _nickname.value = nickname
+                _gender.value = gender
+                _avatarIndex.value = avatarIndex
+                _customAvatarUri.value = customAvatarUri
+                _interests.value = interests
+                _isRegistered.value = true
+                _isUserLoggedIn.value = true
 
-            // Sync to cloud
-            syncProfileToCloud()
+                // Sync to cloud
+                syncProfileToCloud()
+            } else {
+                _loginError.value = true
+            }
         }
     }
 
@@ -454,8 +497,13 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun logout() {
-        _isUserLoggedIn.value = false
-        viewModelScope.launch { profileDao.updateLoginStatus(false) }
+        viewModelScope.launch {
+            val profile = profileDao.getProfileOnce()
+            if (profile != null) {
+                profileDao.updateLoginStatus(false)
+            }
+            _isUserLoggedIn.value = false
+        }
     }
 
     fun updateCustomAvatarUri(uri: String?) {

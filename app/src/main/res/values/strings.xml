@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">You</string>
+    <string name="accessibility_service_description">FocusLock necesita este permiso para bloquear aplicaciones no deseadas durante las sesiones de concentración activa.</string>
 </resources>

@@ -12,9 +12,10 @@ import androidx.room.RoomDatabase
         UserProfile::class,
         UserSettings::class,
         Duel::class,
-        Squad::class
+        Squad::class,
+        SyncAction::class
     ],
-    version = 4,
+    version = 6,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -24,6 +25,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun userSettingsDao(): UserSettingsDao
     abstract fun duelDao(): DuelDao
     abstract fun squadDao(): SquadDao
+    abstract fun syncQueueDao(): SyncQueueDao
 
     companion object {
         @Volatile
