@@ -58,6 +58,7 @@ fun LoginScreen(
 
     if (!isRegistered) {
         // ONBOARDING / REGISTRATION FLOW
+        var registrationStep by remember { mutableIntStateOf(1) }
         var nicknameInput by remember { mutableStateOf("") }
         var emailInput by remember { mutableStateOf("") }
         var pinInput by remember { mutableStateOf("") }
@@ -102,220 +103,297 @@ fun LoginScreen(
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(
-                    text = if (lang == "es") "¡Bienvenido a You!" else "Welcome to You!",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = primaryColor,
-                    textAlign = TextAlign.Center
-                )
-                Text(
-                    text = if (lang == "es") "Configura tu perfil de enfoque extremo." else "Set up your extreme focus profile.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
+                if (registrationStep == 1) {
+                    // STEP 1: Basic Account Registration
+                    Text(
+                        text = if (lang == "es") "¡Bienvenido a You!" else "Welcome to You!",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = primaryColor,
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        text = if (lang == "es") "Paso 1: Registra tu cuenta básica." else "Step 1: Register your basic account.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(32.dp))
 
-                Box(
-                    modifier = Modifier
-                        .size(110.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .border(3.dp, primaryColor, CircleShape)
-                        .clickable {
-                            photoPickerLauncher.launch(
-                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                            )
+                    OutlinedTextField(
+                        value = nicknameInput,
+                        onValueChange = { nicknameInput = it },
+                        label = { Text(if (lang == "es") "Apodo / Nombre" else "Nickname / Name") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = emailInput,
+                        onValueChange = { emailInput = it },
+                        label = { Text(if (lang == "es") "Correo Electrónico" else "Email") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = pinInput,
+                        onValueChange = { pinInput = it },
+                        label = { Text(if (lang == "es") "Contraseña" else "Password") },
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(32.dp))
+
+                    Button(
+                        onClick = {
+                            if (nicknameInput.isNotBlank() && pinInput.length >= 4 && emailInput.isNotBlank()) {
+                                registrationStep = 2
+                            }
                         },
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (pickedImageUri != null) {
-                        AsyncImage(
-                            model = pickedImageUri,
-                            contentDescription = "Custom Profile Pic",
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
+                        enabled = nicknameInput.isNotBlank() && pinInput.length >= 4 && emailInput.isNotBlank(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = primaryColor),
+                        shape = RoundedCornerShape(14.dp)
+                    ) {
                         Text(
-                            text = avatars.getOrElse(selectedAvatarIndex) { "🧠" },
-                            fontSize = 50.sp,
-                            textAlign = TextAlign.Center
+                            text = if (lang == "es") "Siguiente" else "Next",
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 16.sp
                         )
                     }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Text(
+                        text = if (lang == "es") "O accesos rápidos:" else "Or quick access:",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = {
+                                if (emailInput.isNotBlank()) {
+                                    viewModel.loginGoogle(emailInput)
+                                } else {
+                                    viewModel.loginGoogle("test@google.com")
+                                }
+                            },
+                            modifier = Modifier.weight(1f).height(48.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(Icons.Default.AccountCircle, contentDescription = "Google", tint = Color.Black)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Google", fontWeight = FontWeight.Bold)
+                        }
+
+                        Button(
+                            onClick = { viewModel.registerGuest() },
+                            modifier = Modifier.weight(1f).height(48.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text(if (lang == "es") "Invitado (33d)" else "Guest (33d)", fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                } else if (registrationStep == 2) {
+                    // STEP 2: Profile Form
+                    Text(
+                        text = if (lang == "es") "Casi listo..." else "Almost there...",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = primaryColor,
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        text = if (lang == "es") "Paso 2: Llena tu formulario de perfil. ¡OJO! Esto no se podrá modificar después." else "Step 2: Fill your profile form. WARNING! This cannot be altered later.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
                     Box(
                         modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color.Black.copy(alpha = 0.2f)),
-                        contentAlignment = Alignment.BottomCenter
+                            .size(110.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .border(3.dp, primaryColor, CircleShape)
+                            .clickable {
+                                photoPickerLauncher.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                )
+                            },
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            Icons.Default.CameraAlt,
-                            contentDescription = "Edit photo",
-                            tint = Color.White,
-                            modifier = Modifier.padding(bottom = 6.dp).size(20.dp)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = if (lang == "es") "Toca para elegir foto de la galería" else "Tap to choose gallery photo",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                if (pickedImageUri == null) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.padding(vertical = 4.dp)
-                    ) {
-                        avatars.forEachIndexed { idx, emo ->
-                            val isSel = selectedAvatarIndex == idx
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .background(
-                                        if (isSel) primaryColor else Color.White.copy(alpha = 0.05f),
-                                        CircleShape
-                                    )
-                                    .border(1.dp, primaryColor.copy(alpha = 0.3f), CircleShape)
-                                    .clickable { selectedAvatarIndex = idx }
-                                    .wrapContentSize(Alignment.Center)
-                            ) {
-                                Text(emo, fontSize = 20.sp)
-                            }
+                        if (pickedImageUri != null) {
+                            AsyncImage(
+                                model = pickedImageUri,
+                                contentDescription = "Custom Profile Pic",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Text(
+                                text = avatars.getOrElse(selectedAvatarIndex) { "🧠" },
+                                fontSize = 50.sp,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.BottomCenter
+                        ) {
+                            Icon(
+                                Icons.Default.CameraAlt,
+                                contentDescription = "Edit photo",
+                                tint = Color.White,
+                                modifier = Modifier.padding(bottom = 6.dp).size(20.dp)
+                            )
                         }
                     }
-                    Spacer(modifier = Modifier.height(16.dp))
-                } else {
-                    TextButton(onClick = { pickedImageUri = null }) {
-                        Text(if (lang == "es") "Usar emoji en su lugar" else "Use emoji instead", color = MaterialTheme.colorScheme.error)
-                    }
+
                     Spacer(modifier = Modifier.height(8.dp))
-                }
+                    Text(
+                        text = if (lang == "es") "Toca para elegir foto de la galería" else "Tap to choose gallery photo",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
 
-                OutlinedTextField(
-                    value = nicknameInput,
-                    onValueChange = { nicknameInput = it },
-                    label = { Text(if (lang == "es") "Apodo / Nombre" else "Nickname / Name") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                )
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                Spacer(modifier = Modifier.height(12.dp))
-
-                OutlinedTextField(
-                    value = emailInput,
-                    onValueChange = { emailInput = it },
-                    label = { Text(if (lang == "es") "Correo Electrónico" else "Email") },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                OutlinedTextField(
-                    value = pinInput,
-                    onValueChange = { pinInput = it },
-                    label = { Text(if (lang == "es") "Contraseña" else "Password") },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Text(
-                            text = if (lang == "es") "Género e Identidad Visual" else "Gender & Visual Theme",
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.titleSmall,
-                            color = primaryColor
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            val genders = listOf("male" to "👨 Hombre", "female" to "👩 Mujer", "neutral" to "🧑 Neutro")
-                            genders.forEach { (gKey, label) ->
-                                val isSel = selectedGender == gKey
+                    if (pickedImageUri == null) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        ) {
+                            avatars.forEachIndexed { idx, emo ->
+                                val isSel = selectedAvatarIndex == idx
                                 Box(
                                     modifier = Modifier
-                                        .weight(1f)
-                                        .background(if (isSel) primaryColor else MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
-                                        .border(1.dp, if (isSel) Color.White else primaryColor.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-                                        .clickable { selectedGender = gKey }
-                                        .padding(vertical = 10.dp),
-                                    contentAlignment = Alignment.Center
+                                        .size(40.dp)
+                                        .background(
+                                            if (isSel) primaryColor else Color.White.copy(alpha = 0.05f),
+                                            CircleShape
+                                        )
+                                        .border(1.dp, primaryColor.copy(alpha = 0.3f), CircleShape)
+                                        .clickable { selectedAvatarIndex = idx }
+                                        .wrapContentSize(Alignment.Center)
                                 ) {
-                                    Text(
-                                        text = label,
-                                        color = if (isSel) Color.White else MaterialTheme.colorScheme.onSurface,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 13.sp
-                                    )
+                                    Text(emo, fontSize = 20.sp)
                                 }
                             }
                         }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Text(
-                            text = if (lang == "es") "Selecciona tus Gustos / Intereses" else "Select Focus Tastes / Interests",
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.titleSmall,
-                            color = primaryColor
-                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                    } else {
+                        TextButton(onClick = { pickedImageUri = null }) {
+                            Text(if (lang == "es") "Usar emoji en su lugar" else "Use emoji instead", color = MaterialTheme.colorScheme.error)
+                        }
                         Spacer(modifier = Modifier.height(8.dp))
-                        val availableInterests = listOf("Programación 💻", "Diseño Gráfico 🎨", "Lectura 📚", "Deporte y Salud 🏃", "Filosofía 🏛️")
-                        availableInterests.chunked(2).forEach { rowList ->
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                            ) {
-                                rowList.forEach { interest ->
-                                    val isSel = selectedInterests.contains(interest)
-                                    FilterChip(
-                                        selected = isSel,
-                                        onClick = {
-                                            if (isSel) selectedInterests.remove(interest) else selectedInterests.add(interest)
-                                        },
-                                        label = { Text(interest) },
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                }
-                                if (rowList.size < 2) {
-                                    Spacer(modifier = Modifier.weight(1f))
+                    }
+
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                text = if (lang == "es") "Género e Identidad Visual" else "Gender & Visual Theme",
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.titleSmall,
+                                color = primaryColor
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                val genders = listOf("male" to "👨 Hombre", "female" to "👩 Mujer", "neutral" to "🧑 Neutro")
+                                genders.forEach { (gKey, label) ->
+                                    val isSel = selectedGender == gKey
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .background(if (isSel) primaryColor else MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
+                                            .border(1.dp, if (isSel) Color.White else primaryColor.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                                            .clickable { selectedGender = gKey }
+                                            .padding(vertical = 10.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = label,
+                                            color = if (isSel) Color.White else MaterialTheme.colorScheme.onSurface,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.sp
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
-                }
 
-                Spacer(modifier = Modifier.height(32.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                Button(
-                    onClick = {
-                        if (nicknameInput.isNotBlank() && pinInput.length >= 4 && emailInput.isNotBlank()) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                text = if (lang == "es") "Selecciona tus Gustos / Intereses" else "Select Focus Tastes / Interests",
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.titleSmall,
+                                color = primaryColor
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            val availableInterests = listOf("Programación 💻", "Diseño Gráfico 🎨", "Lectura 📚", "Deporte y Salud 🏃", "Filosofía 🏛️")
+                            availableInterests.chunked(2).forEach { rowList ->
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                                ) {
+                                    rowList.forEach { interest ->
+                                        val isSel = selectedInterests.contains(interest)
+                                        FilterChip(
+                                            selected = isSel,
+                                            onClick = {
+                                                if (isSel) selectedInterests.remove(interest) else selectedInterests.add(interest)
+                                            },
+                                            label = { Text(interest) },
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
+                                    if (rowList.size < 2) {
+                                        Spacer(modifier = Modifier.weight(1f))
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(32.dp))
+
+                    Button(
+                        onClick = {
                             viewModel.registerUser(
                                 nickname = nicknameInput,
                                 email = emailInput,
@@ -325,57 +403,23 @@ fun LoginScreen(
                                 customAvatarUri = pickedImageUri?.toString(),
                                 interests = selectedInterests.toList()
                             )
-                        }
-                    },
-                    enabled = nicknameInput.isNotBlank() && pinInput.length >= 4 && emailInput.isNotBlank(),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = primaryColor),
-                    shape = RoundedCornerShape(14.dp)
-                ) {
-                    Text(
-                        text = if (lang == "es") "Comenzar Viaje de Enfoque" else "Begin Focus Journey",
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 16.sp
-                    )
-                }
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                Text(
-                    text = if (lang == "es") "O accesos rápidos:" else "Or quick access:",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(
-                        onClick = {
-                            if (emailInput.isNotBlank()) {
-                                viewModel.loginGoogle(emailInput)
-                            } else {
-                                viewModel.loginGoogle("test@google.com")
-                            }
                         },
-                        modifier = Modifier.weight(1f).height(48.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black),
-                        shape = RoundedCornerShape(12.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = primaryColor),
+                        shape = RoundedCornerShape(14.dp)
                     ) {
-                        Icon(Icons.Default.AccountCircle, contentDescription = "Google", tint = Color.Black)
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Google", fontWeight = FontWeight.Bold)
+                        Text(
+                            text = if (lang == "es") "Finalizar y Comenzar" else "Finish and Begin",
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 16.sp
+                        )
                     }
                     
-                    Button(
-                        onClick = { viewModel.registerGuest() },
-                        modifier = Modifier.weight(1f).height(48.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text(if (lang == "es") "Invitado (33d)" else "Guest (33d)", fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    TextButton(onClick = { registrationStep = 1 }) {
+                        Text(if (lang == "es") "Atrás" else "Back")
                     }
                 }
             }

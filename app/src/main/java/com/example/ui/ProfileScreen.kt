@@ -52,6 +52,7 @@ fun ProfileScreen(
     val longTermGoalsList by viewModel.longTermGoals.collectAsState()
     val customAvatarUri by viewModel.customAvatarUri.collectAsState()
     val nickname by viewModel.nickname.collectAsState()
+    val locked by viewModel.isAccountLocked.collectAsState()
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
@@ -190,7 +191,7 @@ fun ProfileScreen(
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.surfaceVariant)
                         .border(2.dp, primaryThemeColor.copy(alpha = 0.6f), CircleShape)
-                        .clickable {
+                        .clickable(enabled = !locked) {
                             photoPickerLauncher.launch(
                                 PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                             )
@@ -212,19 +213,21 @@ fun ProfileScreen(
                         )
                     }
                     
-                    // Tap overlay indicator
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color.Black.copy(alpha = 0.15f)),
-                        contentAlignment = Alignment.BottomCenter
-                    ) {
-                        Icon(
-                            Icons.Default.CameraAlt,
-                            contentDescription = "Change Picture",
-                            tint = Color.White.copy(alpha = 0.8f),
-                            modifier = Modifier.padding(bottom = 8.dp).size(18.dp)
-                        )
+                    // Tap overlay indicator (only if not locked)
+                    if (!locked) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.BottomCenter
+                        ) {
+                            Icon(
+                                Icons.Default.CameraAlt,
+                                contentDescription = "Change Picture",
+                                tint = Color.White.copy(alpha = 0.8f),
+                                modifier = Modifier.padding(bottom = 8.dp).size(18.dp)
+                            )
+                        }
                     }
                     
                     // Status dot
@@ -267,7 +270,7 @@ fun ProfileScreen(
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 
-                val locked = viewModel.isAccountLocked.collectAsState().value
+                
                 if (locked) {
                     Spacer(modifier = Modifier.width(8.dp))
                     Icon(
@@ -320,7 +323,7 @@ fun ProfileScreen(
                                 color = if (isSelected) Color.White else primaryThemeColor.copy(alpha = 0.3f),
                                 shape = CircleShape
                             )
-                            .clickable { viewModel.setAvatar(index) }
+                            .clickable(enabled = !locked) { viewModel.setAvatar(index) }
                             .testTag("avatar_btn_$index"),
                         contentAlignment = Alignment.Center
                     ) {
@@ -427,7 +430,7 @@ fun ProfileScreen(
                             
                             ElevatedFilterChip(
                                 selected = isSelected,
-                                onClick = { viewModel.setGender(genderKey) },
+                                onClick = { if (!locked) viewModel.setGender(genderKey) },
                                 label = { Text("$icon $label") },
                                 colors = FilterChipDefaults.elevatedFilterChipColors(
                                     selectedContainerColor = primaryThemeColor,
@@ -574,7 +577,7 @@ fun ProfileScreen(
                             ) {
                                 rowList.forEach { interest ->
                                     SuggestionChip(
-                                        onClick = { viewModel.toggleInterest(interest) },
+                                        onClick = { if (!locked) viewModel.toggleInterest(interest) },
                                         label = { Text(interest) },
                                         icon = {
                                             Icon(
@@ -594,34 +597,36 @@ fun ProfileScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        OutlinedTextField(
-                            value = newInterestInput,
-                            onValueChange = { newInterestInput = it },
-                            placeholder = { Text(LocalizedStrings.get("add_interest_hint", lang)) },
-                            singleLine = true,
-                            modifier = Modifier
-                                .weight(1f)
-                                .testTag("new_interest_input")
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        IconButton(
-                            onClick = {
-                                if (newInterestInput.isNotBlank()) {
-                                    viewModel.addCustomInterest(newInterestInput)
-                                    newInterestInput = ""
-                                }
-                            },
-                            colors = IconButtonDefaults.iconButtonColors(
-                                containerColor = primaryThemeColor.copy(alpha = 0.2f)
-                            ),
-                            modifier = Modifier.testTag("add_interest_button")
+                    if (!locked) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Default.Add, contentDescription = "Add interest", tint = primaryThemeColor)
+                            OutlinedTextField(
+                                value = newInterestInput,
+                                onValueChange = { newInterestInput = it },
+                                placeholder = { Text(LocalizedStrings.get("add_interest_hint", lang)) },
+                                singleLine = true,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .testTag("new_interest_input")
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            IconButton(
+                                onClick = {
+                                    if (newInterestInput.isNotBlank()) {
+                                        viewModel.addCustomInterest(newInterestInput)
+                                        newInterestInput = ""
+                                    }
+                                },
+                                colors = IconButtonDefaults.iconButtonColors(
+                                    containerColor = primaryThemeColor.copy(alpha = 0.2f)
+                                ),
+                                modifier = Modifier.testTag("add_interest_button")
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = "Add interest", tint = primaryThemeColor)
+                            }
                         }
                     }
                 }
@@ -666,48 +671,52 @@ fun ProfileScreen(
                                 color = if (goal.isCompleted) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f) else MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.weight(1f)
                             )
-                            IconButton(
-                                onClick = { viewModel.deleteLongTermGoal(goal.id) },
-                                modifier = Modifier.testTag("delete_longgoal_${goal.id}")
-                            ) {
-                                Icon(
-                                    Icons.Default.Delete,
-                                    contentDescription = "Delete Goal",
-                                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
-                                    modifier = Modifier.size(18.dp)
-                                )
+                            if (!locked) {
+                                IconButton(
+                                    onClick = { viewModel.deleteLongTermGoal(goal.id) },
+                                    modifier = Modifier.testTag("delete_longgoal_${goal.id}")
+                                ) {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = "Delete Goal",
+                                        tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        OutlinedTextField(
-                            value = newGoalInput,
-                            onValueChange = { newGoalInput = it },
-                            placeholder = { Text(LocalizedStrings.get("add_goal_hint", lang)) },
-                            singleLine = true,
-                            modifier = Modifier
-                                .weight(1f)
-                                .testTag("new_longgoal_input")
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        IconButton(
-                            onClick = {
-                                if (newGoalInput.isNotBlank()) {
-                                    viewModel.addLongTermGoal(newGoalInput)
-                                    newGoalInput = ""
-                                }
-                            },
-                            colors = IconButtonDefaults.iconButtonColors(
-                                containerColor = primaryThemeColor.copy(alpha = 0.2f)
-                            ),
-                            modifier = Modifier.testTag("add_longgoal_button")
+                    if (!locked) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Default.Add, contentDescription = "Add Goal", tint = primaryThemeColor)
+                            OutlinedTextField(
+                                value = newGoalInput,
+                                onValueChange = { newGoalInput = it },
+                                placeholder = { Text(LocalizedStrings.get("add_goal_hint", lang)) },
+                                singleLine = true,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .testTag("new_longgoal_input")
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            IconButton(
+                                onClick = {
+                                    if (newGoalInput.isNotBlank()) {
+                                        viewModel.addLongTermGoal(newGoalInput)
+                                        newGoalInput = ""
+                                    }
+                                },
+                                colors = IconButtonDefaults.iconButtonColors(
+                                    containerColor = primaryThemeColor.copy(alpha = 0.2f)
+                                ),
+                                modifier = Modifier.testTag("add_longgoal_button")
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = "Add Goal", tint = primaryThemeColor)
+                            }
                         }
                     }
                 }
