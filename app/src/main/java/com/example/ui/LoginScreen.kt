@@ -340,6 +340,44 @@ fun LoginScreen(
                         fontSize = 16.sp
                     )
                 }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Text(
+                    text = if (lang == "es") "O accesos rápidos:" else "Or quick access:",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = {
+                            if (emailInput.isNotBlank()) {
+                                viewModel.loginGoogle(emailInput)
+                            } else {
+                                viewModel.loginGoogle("test@google.com")
+                            }
+                        },
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.AccountCircle, contentDescription = "Google", tint = Color.Black)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Google", fontWeight = FontWeight.Bold)
+                    }
+                    
+                    Button(
+                        onClick = { viewModel.registerGuest() },
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(if (lang == "es") "Invitado (33d)" else "Guest (33d)", fontWeight = FontWeight.Bold)
+                    }
+                }
             }
         }
     } else {

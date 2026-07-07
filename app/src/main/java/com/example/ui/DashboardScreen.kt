@@ -150,6 +150,7 @@ fun DashboardScreen(
         var title by remember { mutableStateOf("") }
         var duration by remember { mutableStateOf("25") }
         var isPomo by remember { mutableStateOf(false) }
+        var allowEarly by remember { mutableStateOf(true) }
 
         AlertDialog(
             onDismissRequest = { showAddDialog = false },
@@ -192,12 +193,34 @@ fun DashboardScreen(
                             onCheckedChange = { isPomo = it }
                         )
                     }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = if (lang == "es") "Permitir Completar Antes" else "Allow Early Complete",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = if (lang == "es") "Muestra el botón 'Completar Meta' durante la sesión." else "Shows 'Complete Goal' button during session.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = allowEarly,
+                            onCheckedChange = { allowEarly = it }
+                        )
+                    }
                 }
             },
             confirmButton = {
                 Button(onClick = {
                     val durationInt = duration.toIntOrNull() ?: 25
-                    viewModel.addGoal(title, durationInt, isPomo)
+                    viewModel.addGoal(title, durationInt, isPomo, allowEarly)
                     showAddDialog = false
                 }) {
                     Text(LocalizedStrings.get("add_button", lang))

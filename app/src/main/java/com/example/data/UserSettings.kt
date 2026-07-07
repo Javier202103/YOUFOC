@@ -11,5 +11,7 @@ data class UserSettings(
     val waTimerMinutes: Int = 5,
     val focusSleepEnabled: Boolean = true,
     val forceSleepSimulation: Boolean = false,
-    val allowedApps: String = "" // Comma-separated package names
+    val allowedApps: String = "", // Comma-separated package names
+    // Alarma de "tienes que hacer tu lección" — hora en formato "HH:mm" o "" si desactivada
+    val lessonAlarmTime: String = ""
 )

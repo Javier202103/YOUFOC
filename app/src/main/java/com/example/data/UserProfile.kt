@@ -25,5 +25,10 @@ data class UserProfile(
     val pinHash: String = "",
     val isRegistered: Boolean = false,
     val customAvatarUri: String? = null,
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    // Bloqueo de datos de cuenta (nickname/email/pin) tras registro
+    val isAccountLocked: Boolean = false,
+    val email: String = "",
+    // Para cuentas de invitado: timestamp de expiración (null = cuenta normal)
+    val guestExpiryDate: Long? = null
 )

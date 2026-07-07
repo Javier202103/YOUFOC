@@ -42,6 +42,7 @@ object Routes {
     const val DUELS = "duels"
     const val APP_SELECTOR = "app_selector"
     const val PERMISSIONS = "permissions"
+    const val ONBOARDING = "onboarding"
     
     fun createFocusRoute(goalId: Int) = "focus_mode/$goalId"
 }
@@ -133,9 +134,18 @@ fun AppNavigation(viewModel: FocusViewModel) {
                                 popUpTo(Routes.LOGIN) { inclusive = true }
                             }
                         } else {
-                            navController.navigate(Routes.PERMISSIONS) {
+                            navController.navigate(Routes.ONBOARDING) {
                                 popUpTo(Routes.LOGIN) { inclusive = true }
                             }
+                        }
+                    }
+                )
+            }
+            composable(Routes.ONBOARDING) {
+                OnboardingScreen(
+                    onFinish = {
+                        navController.navigate(Routes.PERMISSIONS) {
+                            popUpTo(Routes.ONBOARDING) { inclusive = true }
                         }
                     }
                 )

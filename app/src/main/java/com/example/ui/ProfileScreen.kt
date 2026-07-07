@@ -259,12 +259,35 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(18.dp))
 
-            Text(
-                text = nickname,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.ExtraBold,
-                color = MaterialTheme.colorScheme.onBackground
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = nickname,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                
+                val locked = viewModel.isAccountLocked.collectAsState().value
+                if (locked) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(
+                        Icons.Default.Lock,
+                        contentDescription = "Locked Profile",
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+            
+            val emailValue = viewModel.email.collectAsState().value
+            if (emailValue.isNotBlank()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = emailValue,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
             Spacer(modifier = Modifier.height(4.dp))
 

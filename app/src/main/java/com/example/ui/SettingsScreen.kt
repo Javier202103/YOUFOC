@@ -18,6 +18,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.viewmodel.FocusViewModel
+import com.example.service.FocusAccessibilityService
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.clickable
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,6 +34,8 @@ fun SettingsScreen(
     val vpnActive by viewModel.vpnShieldActive.collectAsState()
     val accActive by viewModel.accessibilityLockerActive.collectAsState()
     val waMinutes by viewModel.waTimerMinutes.collectAsState()
+    val lessonAlarmTime by viewModel.lessonAlarmTime.collectAsState()
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -131,12 +136,15 @@ fun SettingsScreen(
             }
 
             // App Whitelist Selection
+            val isSessionActive = FocusAccessibilityService.isSessionActive
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 12.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                onClick = onNavigateToAppSelector
+                    .padding(bottom = 12.dp)
+                    .then(if (isSessionActive) Modifier else Modifier.clickable { onNavigateToAppSelector() }),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isSessionActive) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface
+                )
             ) {
                 Row(
                     modifier = Modifier
@@ -158,11 +166,19 @@ fun SettingsScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    Icon(
-                        Icons.Default.ArrowBack, // We'll just use ArrowBack and rotate it or something, or better yet, skip the icon for now.
-                        contentDescription = "Go",
-                        modifier = Modifier.scale(scaleX = -1f, scaleY = 1f) // Flip arrow to point right
-                    )
+                    if (isSessionActive) {
+                        Icon(
+                            Icons.Default.Lock,
+                            contentDescription = "Locked",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    } else {
+                        Icon(
+                            Icons.Default.ArrowBack,
+                            contentDescription = "Go",
+                            modifier = Modifier.scale(scaleX = -1f, scaleY = 1f)
+                        )
+                    }
                 }
             }
 
@@ -333,6 +349,77 @@ fun SettingsScreen(
                     )
                 }
             }
+            }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            Text(
+                text = if (lang == "es") "Recordatorios y Alarmas ⏰" else "Reminders and Alarms ⏰",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            // Lesson Alarm Card
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Text(
+                        text = if (lang == "es") "Alarma de Lección Diaria" else "Daily Lesson Alarm",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = if (lang == "es") "Recibe una notificación push persistente para hacer tu sesión." else "Receive a persistent push notification to do your session.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (lessonAlarmTime.isEmpty()) (if (lang == "es") "Desactivada" else "Disabled")
+                                   else (if (lang == "es") "Hora: $lessonAlarmTime" else "Time: $lessonAlarmTime"),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = if (lessonAlarmTime.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary
+                        )
+                        Row {
+                            FilterChip(
+                                selected = lessonAlarmTime.isEmpty(),
+                                onClick = { viewModel.setLessonAlarmTime("", context) },
+                                label = { Text(if (lang == "es") "Off" else "Off") },
+                                modifier = Modifier.padding(end = 8.dp)
+                            )
+                            // Just a few hardcoded examples for now, a real app would use a TimePickerDialog
+                            val times = listOf("08:00", "15:00", "20:00")
+                            times.forEach { time ->
+                                FilterChip(
+                                    selected = lessonAlarmTime == time,
+                                    onClick = { viewModel.setLessonAlarmTime(time, context) },
+                                    label = { Text(time) },
+                                    modifier = Modifier.padding(end = 4.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
             
             Spacer(modifier = Modifier.height(32.dp))
             
@@ -350,6 +437,5 @@ fun SettingsScreen(
                     color = MaterialTheme.colorScheme.onError
                 )
             }
-        }
     }
 }

@@ -52,7 +52,7 @@ fun FocusModeScreen(
     // Sound control
     val currentSound by viewModel.currentAmbientSound.collectAsState()
 
-    // Start FocusLockService and stop ambient sound / service when leaving Focus Mode
+    // Start FocusLockService, Overlay Service and stop ambient sound / service when leaving Focus Mode
     DisposableEffect(Unit) {
         FocusAccessibilityService.isSessionActive = true
         FocusAccessibilityService.currentGoalTargetApp = goal.targetAppPackage
@@ -60,9 +60,20 @@ fun FocusModeScreen(
         // Optional: Notify user if service is not running (a full check requires AccessibilityManager)
         Toast.makeText(context, "Modo de enfoque activado. Asegúrate de tener el servicio de accesibilidad encendido.", Toast.LENGTH_LONG).show()
         
+        // Start floating overlay service
+        val overlayIntent = Intent(context, com.example.service.TimerOverlayService::class.java).apply {
+            putExtra(com.example.service.TimerOverlayService.EXTRA_SECONDS, goal.durationMinutes * 60)
+        }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            context.startForegroundService(overlayIntent)
+        } else {
+            context.startService(overlayIntent)
+        }
+        
         onDispose {
             viewModel.stopAmbientSound()
             FocusAccessibilityService.isSessionActive = false
+            context.stopService(Intent(context, com.example.service.TimerOverlayService::class.java))
         }
     }
 
@@ -329,20 +340,30 @@ fun FocusModeScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            Button(
-                onClick = {
-                    viewModel.markGoalCompleted(goal)
-                    onComplete()
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = displayColor, contentColor = if (isBreak) Color.Black else Color.White),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Icon(Icons.Default.CheckCircle, contentDescription = "Complete")
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(LocalizedStrings.get("complete_unlock", lang), fontWeight = FontWeight.Bold)
+            if (goal.allowEarlyComplete) {
+                Button(
+                    onClick = {
+                        viewModel.markGoalCompleted(goal)
+                        onComplete()
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = displayColor, contentColor = if (isBreak) Color.Black else Color.White),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.CheckCircle, contentDescription = "Complete")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(LocalizedStrings.get("complete_unlock", lang), fontWeight = FontWeight.Bold)
+                }
+            } else {
+                Text(
+                    text = "Modo Implacable: Termina la sesión para salir.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(8.dp)
+                )
             }
         }
     }

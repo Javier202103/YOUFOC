@@ -58,6 +58,12 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
     private val _loginError = MutableStateFlow(false)
     val loginError = _loginError.asStateFlow()
 
+    private val _isAccountLocked = MutableStateFlow(false)
+    val isAccountLocked = _isAccountLocked.asStateFlow()
+
+    private val _email = MutableStateFlow("")
+    val email = _email.asStateFlow()
+
     private val _avatarIndex = MutableStateFlow(0)
     val avatarIndex = _avatarIndex.asStateFlow()
 
@@ -110,6 +116,9 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _forceSleepSimulation = MutableStateFlow(false)
     val forceSleepSimulation = _forceSleepSimulation.asStateFlow()
+
+    private val _lessonAlarmTime = MutableStateFlow("")
+    val lessonAlarmTime = _lessonAlarmTime.asStateFlow()
 
     // Duels and Squads (from Room)
     val activeDuels: StateFlow<List<Duel>> = duelDao.getAllDuels().stateIn(
@@ -199,6 +208,8 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
                 _isRegistered.value = profile.isRegistered
                 _customAvatarUri.value = profile.customAvatarUri
                 _nickname.value = profile.nickname
+                _isAccountLocked.value = profile.isAccountLocked
+                _email.value = profile.email
 
                 // Parse interests CSV
                 if (profile.interests.isNotBlank()) {
@@ -232,11 +243,64 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+
     fun setAllowedApps(apps: String) {
         _allowedApps.value = apps
         viewModelScope.launch {
             val settings = settingsDao.getSettingsOnce() ?: UserSettings()
             settingsDao.insertSettings(settings.copy(allowedApps = apps))
+        }
+    }
+
+
+
+    fun setLessonAlarmTime(timeString: String, context: android.content.Context) {
+        _lessonAlarmTime.value = timeString
+        viewModelScope.launch {
+            val settings = settingsDao.getSettingsOnce() ?: UserSettings()
+            settingsDao.insertSettings(settings.copy(lessonAlarmTime = timeString))
+            
+            // Configure Android Alarm
+            val alarmManager = context.getSystemService(android.content.Context.ALARM_SERVICE) as android.app.AlarmManager
+            val intent = android.content.Intent(context, com.example.service.LessonAlarmReceiver::class.java)
+            val pendingIntent = android.app.PendingIntent.getBroadcast(
+                context, 
+                com.example.service.LessonAlarmReceiver.NOTIFICATION_ID, 
+                intent, 
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+            )
+            
+            if (timeString.isEmpty()) {
+                alarmManager.cancel(pendingIntent)
+            } else {
+                val parts = timeString.split(":")
+                if (parts.size == 2) {
+                    val hour = parts[0].toIntOrNull() ?: 0
+                    val minute = parts[1].toIntOrNull() ?: 0
+                    val calendar = Calendar.getInstance().apply {
+                        timeInMillis = System.currentTimeMillis()
+                        set(Calendar.HOUR_OF_DAY, hour)
+                        set(Calendar.MINUTE, minute)
+                        set(Calendar.SECOND, 0)
+                        if (before(Calendar.getInstance())) {
+                            add(Calendar.DAY_OF_MONTH, 1)
+                        }
+                    }
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                        alarmManager.setExactAndAllowWhileIdle(
+                            android.app.AlarmManager.RTC_WAKEUP,
+                            calendar.timeInMillis,
+                            pendingIntent
+                        )
+                    } else {
+                        alarmManager.setExact(
+                            android.app.AlarmManager.RTC_WAKEUP,
+                            calendar.timeInMillis,
+                            pendingIntent
+                        )
+                    }
+                }
+            }
         }
     }
 
@@ -250,6 +314,7 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
                 _focusSleepEnabled.value = settings.focusSleepEnabled
                 _forceSleepSimulation.value = settings.forceSleepSimulation
                 _allowedApps.value = settings.allowedApps
+                _lessonAlarmTime.value = settings.lessonAlarmTime
             } else {
                 settingsDao.insertSettings(UserSettings())
             }
@@ -458,7 +523,9 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
                     customAvatarUri = customAvatarUri,
                     interests = interests.joinToString(","),
                     isRegistered = true,
-                    isLoggedIn = true
+                    isLoggedIn = true,
+                    isAccountLocked = true, // Bloquear datos tras registro
+                    email = email
                 )
                 profileDao.insertProfile(updatedProfile)
 
@@ -494,6 +561,44 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
 
     fun login(pin: String) {
         verifyPinAndLogin(pin)
+    }
+
+    fun loginGoogle(email: String) {
+        // Simulación de Google Login (rellenaría el nickname/correo de Google)
+        val mockNickname = email.substringBefore("@").capitalize()
+        registerUser(
+            nickname = mockNickname,
+            email = email,
+            pin = "GOOGLE_OAUTH",
+            gender = "neutral",
+            avatarIndex = 0,
+            customAvatarUri = null,
+            interests = emptyList()
+        )
+    }
+
+    fun registerGuest() {
+        viewModelScope.launch {
+            val profile = profileDao.getProfileOnce() ?: UserProfile()
+            // 33 días a partir de ahora
+            val expiryDate = System.currentTimeMillis() + (33L * 24 * 60 * 60 * 1000)
+            val updatedProfile = profile.copy(
+                nickname = "Invitado",
+                pinHash = "", // Sin contraseña
+                gender = "neutral",
+                avatarIndex = 1,
+                customAvatarUri = null,
+                isRegistered = true,
+                isLoggedIn = true,
+                isAccountLocked = true,
+                guestExpiryDate = expiryDate
+            )
+            profileDao.insertProfile(updatedProfile)
+
+            _nickname.value = "Invitado"
+            _isRegistered.value = true
+            _isUserLoggedIn.value = true
+        }
     }
 
     fun logout() {
@@ -534,9 +639,9 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
     // GOALS (Room, already working)
     // ================================================================
 
-    fun addGoal(title: String, durationMinutes: Int, isPomodoro: Boolean = false) {
+    fun addGoal(title: String, durationMinutes: Int, isPomodoro: Boolean = false, allowEarlyComplete: Boolean = true) {
         viewModelScope.launch {
-            goalRepository.insertGoal(Goal(title = title, durationMinutes = durationMinutes, isPomodoro = isPomodoro))
+            goalRepository.insertGoal(Goal(title = title, durationMinutes = durationMinutes, isPomodoro = isPomodoro, allowEarlyComplete = allowEarlyComplete))
         }
     }
 

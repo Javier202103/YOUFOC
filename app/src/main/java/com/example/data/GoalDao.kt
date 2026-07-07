@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface GoalDao {
-    @Query("SELECT * FROM learning_goals ORDER BY createdAt DESC")
+    @Query("SELECT * FROM goals ORDER BY createdAt DESC")
     fun getAllGoals(): Flow<List<Goal>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -18,6 +18,6 @@ interface GoalDao {
     @Update
     suspend fun updateGoal(goal: Goal)
 
-    @Query("DELETE FROM learning_goals WHERE id = :id")
+    @Query("DELETE FROM goals WHERE id = :id")
     suspend fun deleteGoalById(id: Int)
 }
