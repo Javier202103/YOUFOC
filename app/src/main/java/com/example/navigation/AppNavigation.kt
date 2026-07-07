@@ -3,12 +3,12 @@ package com.example.navigation
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.List
+import androidx.compose.material.icons.automirrored.outlined.List
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.Star
@@ -50,7 +50,7 @@ object Routes {
 sealed class BottomNavItem(var route: String, var icon: ImageVector, var selectedIcon: ImageVector, var translationKey: String) {
     object Dashboard : BottomNavItem(Routes.DASHBOARD, Icons.Outlined.Home, Icons.Filled.Home, "tab_home")
     object Achievements : BottomNavItem(Routes.ACHIEVEMENTS, Icons.Outlined.Star, Icons.Filled.Star, "tab_achievements")
-    object Ranking : BottomNavItem(Routes.RANKING, Icons.Outlined.List, Icons.Filled.List, "tab_ranking")
+    object Ranking : BottomNavItem(Routes.RANKING, Icons.AutoMirrored.Outlined.List, Icons.AutoMirrored.Filled.List, "tab_ranking")
     object Duels : BottomNavItem(Routes.DUELS, Icons.Outlined.Shield, Icons.Filled.Shield, "tab_duels")
     object Profile : BottomNavItem(Routes.PROFILE, Icons.Outlined.Person, Icons.Filled.Person, "tab_profile")
 }

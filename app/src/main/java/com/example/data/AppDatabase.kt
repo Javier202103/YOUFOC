@@ -38,7 +38,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "focus_lock_database"
                 )
-                .fallbackToDestructiveMigration()
+                .fallbackToDestructiveMigration(dropAllTables = true)
                 .build()
                 INSTANCE = instance
                 instance

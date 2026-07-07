@@ -565,7 +565,7 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
 
     fun loginGoogle(email: String) {
         // Simulación de Google Login (rellenaría el nickname/correo de Google)
-        val mockNickname = email.substringBefore("@").capitalize()
+        val mockNickname = email.substringBefore("@").replaceFirstChar { it.uppercaseChar() }
         registerUser(
             nickname = mockNickname,
             email = email,
@@ -621,7 +621,7 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
     fun speakQuote(text: String, lang: String) {
         tts?.let {
             if (_isTtsInitialized.value) {
-                val locale = if (lang == "en") Locale.US else Locale("es", "ES")
+                val locale = if (lang == "en") Locale.US else Locale.forLanguageTag("es-ES")
                 it.language = locale
                 it.speak(text, TextToSpeech.QUEUE_FLUSH, null, "motivation_quote_utterance")
             }
