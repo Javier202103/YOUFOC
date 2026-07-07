@@ -537,6 +537,7 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
                 _interests.value = interests
                 _isRegistered.value = true
                 _isUserLoggedIn.value = true
+                _isAccountLocked.value = true
 
                 // Sync to cloud
                 syncProfileToCloud()
@@ -598,6 +599,7 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
             _nickname.value = "Invitado"
             _isRegistered.value = true
             _isUserLoggedIn.value = true
+            _isAccountLocked.value = true
         }
     }
 
